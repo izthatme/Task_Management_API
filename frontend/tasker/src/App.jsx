@@ -18,10 +18,11 @@ export default function App(){
 return (
 <AuthProvider>
 <Routes>
-<Route path="/" element={<Navigate to="/app/tasks" replace />} />
-<Route path="/app/tasks" element={<h1>Hello User</h1>} />
+<Route path="/" element={<Navigate to="/login" replace />} />
+
 <Route path="/login" element={<Login />} />
 <Route path="/register" element={<Register />} />
+<Route path="/app/tasks" element={<h1>Hello User</h1>} />
 <Route element={<AuthGuard />}>
 <Route path="/app/" element={
 <div>
