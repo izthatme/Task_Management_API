@@ -53,6 +53,9 @@ exports.register = async (req, res, next) => {
 };
 
 exports.login = async (req, res, next) => {
+
+  console.log("hiiii", req.cookies);
+  
   try {
     const { email, password } = req.body;
     if (!email || !password)

@@ -2,12 +2,17 @@
 require("dotenv").config(); // env [3]
 const express = require("express"); // express [3]
 const cookieParser = require("cookie-parser")
+const cors = require("cors")
 const app = express();
 
 // core middleware
 app.use(express.json()); // JSON body parser [3]
 app.use(cookieParser());
 
+app.use(cors({
+    credentials: true,
+    origin: "http://localhost:5173"
+}));
 // mount API routes
 const apiRoutes = require("./src/routes"); // src/routes/index.js [1]
 app.use("/api", apiRoutes); // /api/* [1]
@@ -43,7 +48,7 @@ const port = process.env.PORT || 4000; // port [3]
 (async () => {
   try {
     await initDb(); // sequelize.authenticate() [4]
-    await sequelize.sync({ alter: true }); // DEV ONLY schema align [4]
+    // await sequelize.sync({ alter: true }); // DEV ONLY schema align [4]
     app.listen(port, () => console.log(`Server Started Port :${port}`)); // start [1]
   } catch (e) {
     console.error("Startup failed:", e.message); // fail log [1]
