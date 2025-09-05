@@ -6,7 +6,23 @@ const { errorHandler } = require('./middleware/errorHandler');
 
 const app = express();
 app.use(helmet());
-app.use(cors());
+
+const allowedOrigins = [
+  "https://task-management-api-1-w3gn.onrender.com", // ✅ frontend (deployed)
+  "http://localhost:5173" // ✅ dev (optional)
+];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    console.log("Incoming Origin:", origin); // 🟢 log to confirm deployment
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true
+}));
 app.use(express.json());
 
 app.use('/api', routes);
