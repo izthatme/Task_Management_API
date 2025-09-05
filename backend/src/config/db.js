@@ -2,15 +2,24 @@ const { Sequelize } = require("sequelize");
 require("dotenv").config();
 
 const sequelize = new Sequelize(
-  process.env.DB_NAME,
-  process.env.DB_USER,
-  process.env.DB_PASS,
-  { host: process.env.DB_HOST, dialect: "mysql", logging: false }
+  process.env.DB_NAME,        // DB name
+  process.env.DB_USER,        // DB user
+  process.env.DB_PASS,        // DB password
+  {
+    host: process.env.DB_HOST,
+    port: process.env.DB_PORT,  // ✅ Railway custom port (important!)
+    dialect: "mysql",
+    logging: false,             // disable SQL logs in console
+  }
 );
 
 async function initDb() {
-  await sequelize.authenticate();
-  console.log("DB connected");
+  try {
+    await sequelize.authenticate();
+    console.log("✅ Database connected successfully!");
+  } catch (err) {
+    console.error("❌ Database connection failed:", err.message);
+  }
 }
 
 module.exports = { sequelize, initDb };
