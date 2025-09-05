@@ -59,11 +59,29 @@
 require("dotenv").config();
 const express = require("express");
 const cookieParser = require("cookie-parser");
+const cors = require('cors');
 const app = express();
 
 // middleware
 app.use(express.json());
 app.use(cookieParser());
+
+const allowedOrigins = [
+  "https://task-management-api-1-w3gn.onrender.com", // ✅ frontend (deployed)
+  "http://localhost:5173" // ✅ dev (optional)
+];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    console.log("Incoming Origin:", origin); // 🟢 log to confirm deployment
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true
+}));
 
 
 // routes
