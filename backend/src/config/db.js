@@ -13,6 +13,4 @@ async function initDb() {
   console.log("DB connected");
 }
 
-initDb();
-
 module.exports = { sequelize, initDb };

@@ -42,6 +42,13 @@ const User = require('./User')(sequelize);
 const Task = require('./Task')(sequelize);
 const RefreshToken = require('./RefreshToken')(sequelize);
 
-// associations (optional here)
+// associations
+Task.belongsTo(User, { foreignKey: 'createdBy', as: 'creator' });
+Task.belongsTo(User, { foreignKey: 'assignedTo', as: 'assignee' });
+User.hasMany(Task, { foreignKey: 'createdBy', as: 'createdTasks' });
+User.hasMany(Task, { foreignKey: 'assignedTo', as: 'assignedTasks' });
+
+RefreshToken.belongsTo(User, { foreignKey: 'userId' });
+User.hasMany(RefreshToken, { foreignKey: 'userId' });
 
 module.exports = { sequelize, User, Task, RefreshToken };

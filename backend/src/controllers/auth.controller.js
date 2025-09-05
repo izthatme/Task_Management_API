@@ -1,13 +1,23 @@
 // src/controllers/auth.controller.js
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const { User } = require("../models");
+const { User, RefreshToken } = require("../models");
+const { signAccessToken, issueRefreshToken } = require("../services/token.service");
 
-function signAccessToken(user) {
-  const payload = { id: user.id, role: user.role };
-  const secret = process.env.JWT_ACCESS_SECRET;
-  const expiresIn = process.env.JWT_ACCESS_EXPIRES || "15m";
-  return jwt.sign(payload, secret, { expiresIn });
+function setAuthCookies(res, accessToken, refreshToken) {
+  const isProd = process.env.NODE_ENV === 'production';
+  res.cookie('accessToken', accessToken, {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: isProd ? 'none' : 'lax',
+    maxAge: 15 * 60 * 1000,
+  });
+  res.cookie('refreshToken', refreshToken, {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: isProd ? 'none' : 'lax',
+    maxAge: (parseInt(process.env.REFRESH_EXPIRES_DAYS || '7', 10)) * 24 * 60 * 60 * 1000,
+  });
 }
 
 exports.register = async (req, res, next) => {
@@ -29,15 +39,8 @@ exports.register = async (req, res, next) => {
     });
 
     const accessToken = signAccessToken(user);
-
-    res.cookie('accessToken', accessToken, {
-      httpOnly: true,              // JS se readable nahi (secure)
-      secure: true, // HTTPS par true, local HTTP par false
-      sameSite: "none",
-      maxAge: 15 * 60 * 1000,      // 15 minutes
-    });
-
-    // Optional: implement refresh tokens later
+    const refreshToken = await issueRefreshToken(user);
+    setAuthCookies(res, accessToken, refreshToken);
     return res.status(201).json({
       user: {
         id: user.id,
@@ -46,6 +49,7 @@ exports.register = async (req, res, next) => {
         role: user.role,
       },
       accessToken,
+      refreshToken,
     });
   } catch (e) {
     next(e);
@@ -53,21 +57,23 @@ exports.register = async (req, res, next) => {
 };
 
 exports.login = async (req, res, next) => {
-
-  console.log("hiiii", req.cookies);
-  
   try {
     const { email, password } = req.body;
+    
     if (!email || !password)
       return res.status(400).json({ message: "Missing fields" });
 
     const user = await User.findOne({ where: { email } });
+
+    
     if (!user) return res.status(401).json({ message: "Invalid credentials" });
 
     const ok = await bcrypt.compare(password, user.passwordHash);
     if (!ok) return res.status(401).json({ message: "Invalid credentials" });
 
     const accessToken = signAccessToken(user);
+    const refreshToken = await issueRefreshToken(user);
+    setAuthCookies(res, accessToken, refreshToken);
     return res.json({
       user: {
         id: user.id,
@@ -76,13 +82,31 @@ exports.login = async (req, res, next) => {
         role: user.role,
       },
       accessToken,
+      refreshToken,
     });
   } catch (e) {
     next(e);
   }
 };
 
-// Placeholder for refresh (implement if storing refresh tokens)
-exports.refresh = async (req, res) => {
-  return res.status(501).json({ message: "Refresh not implemented" });
+exports.refresh = async (req, res, next) => {
+  try {
+    const incoming = req.body?.refreshToken || req.cookies?.refreshToken;
+    if (!incoming) return res.status(401).json({ message: 'No refresh token' });
+    const row = await RefreshToken.findOne({ where: { token: incoming, revokedAt: null }, include: [User] });
+    if (!row) return res.status(401).json({ message: 'Invalid refresh token' });
+    if (RefreshToken.verifyExpiration(row)) return res.status(401).json({ message: 'Refresh token expired' });
+    row.revokedAt = new Date();
+    await row.save();
+    const accessToken = signAccessToken(row.User);
+    const newRefresh = await issueRefreshToken(row.User);
+    setAuthCookies(res, accessToken, newRefresh);
+    return res.json({ accessToken, refreshToken: newRefresh });
+  } catch (e) { next(e); }
+};
+
+exports.logout = async (req, res) => {
+  res.clearCookie('accessToken');
+  res.clearCookie('refreshToken');
+  return res.json({ success: true });
 };

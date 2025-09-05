@@ -48,7 +48,7 @@ const port = process.env.PORT || 4000; // port [3]
 (async () => {
   try {
     await initDb(); // sequelize.authenticate() [4]
-    // await sequelize.sync({ alter: true }); // DEV ONLY schema align [4]
+    await sequelize.sync({ alter: true }); // DEV ONLY schema align [4]
     app.listen(port, () => console.log(`Server Started Port :${port}`)); // start [1]
   } catch (e) {
     console.error("Startup failed:", e.message); // fail log [1]
